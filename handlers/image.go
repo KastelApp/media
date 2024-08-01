@@ -13,7 +13,35 @@ import (
 
 func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context) {
 
-	url := c.Query("url")
+	// url := c.Query("url")
+
+	// ? url is everything past the /resize/ in the path
+	url := c.Param("url")
+
+	println(url);
+
+	// ? we want to remove the first / and https?:/ from the url
+	// ? we do want to keep if its http or https tho
+	
+	url = url[1:]
+
+	isHttps := false
+
+	if url[:5] == "https" {
+		isHttps = true
+		url = url[7:]
+	} else {
+		url = url[6:]
+	}
+
+
+	if isHttps {
+		url = "https://" + url
+	} else {
+		url = "http://" + url
+	}
+
+
 	size, _ := strconv.Atoi(c.Query("size"))
 	width, _ := strconv.Atoi(c.Query("width"))
 	height, _ := strconv.Atoi(c.Query("height"))
