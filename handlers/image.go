@@ -16,7 +16,13 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 
 	// ? we want to remove the first / and https?:/ from the url
 	// ? we do want to keep if its http or https tho
-	
+
+	if len(url) < 8 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "URL parameter is required"})
+
+		return
+	}
+
 	url = url[1:]
 
 	isHttps := false
@@ -27,7 +33,6 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 	} else {
 		url = url[6:]
 	}
-
 
 	if isHttps {
 		url = "https://" + url
@@ -85,23 +90,23 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 	}
 
 	blob, err := app.Serve(ctx, imagorpath.Params{
-		Image:  url,
-		Width:  width,
-		Height: height,
-		Smart:  true,
+		Image:   url,
+		Width:   width,
+		Height:  height,
+		Smart:   true,
 		Filters: filters,
 	})
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		
+
 		return
 	}
 
 	reader, _, err := blob.NewReader()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		
+
 		return
 	}
 	defer reader.Close()

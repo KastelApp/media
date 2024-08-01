@@ -32,5 +32,17 @@ func main() {
 	})
 	r.GET("/frame/*url", handlers.GetFirstFrameHandler)
 
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Welcome to the media server!",
+		})
+	})
+
 	r.Run(":3030")
 }

@@ -33,6 +33,12 @@ func GetFirstFrameHandler(c *gin.Context) {
 
 	// ? we want to remove the first / and https?:/ from the url
 	// ? we do want to keep if its http or https tho
+
+	if len(url) < 8 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "URL parameter is required"})
+
+		return
+	}
 	
 	url = url[1:]
 
