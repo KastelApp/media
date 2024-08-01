@@ -27,10 +27,10 @@ func main() {
 
 	defer app.Shutdown(ctx)
 
-	r.GET("/resize/*url", func(c *gin.Context) {
+	r.GET("/external/*url", func(c *gin.Context) {
 		handlers.ResizeImageHandler(app, ctx, c)
 	})
-	r.GET("/frame", handlers.GetFirstFrameHandler)
+	r.GET("/frame/*url", handlers.GetFirstFrameHandler)
 
 	r.Run(":3030")
 }
