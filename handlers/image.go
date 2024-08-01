@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/cshum/imagor"
 	"github.com/cshum/imagor/imagorpath"
@@ -25,13 +26,36 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 
 	url = url[1:]
 
-	isHttps := false
+	var isHttps bool
+	var domain string
 
-	if url[:5] == "https" {
+	if strings.HasPrefix(url, "https:/") {
 		isHttps = true
+		domain = url[7:]
+
 		url = url[7:]
-	} else {
+
+	} else if strings.HasPrefix(url, "http:/") {
+		isHttps = false
+		domain = url[6:]
 		url = url[6:]
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
+		return
+	}
+
+	domainParts := strings.Split(domain, "/")
+
+	if len(domainParts) > 0 {
+		domain = domainParts[0]
+	}
+
+	serviceDomain := c.Request.Host
+
+	if domain == serviceDomain {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid request to the same domain"})
+
+		return
 	}
 
 	if isHttps {
