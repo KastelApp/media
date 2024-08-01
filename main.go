@@ -31,6 +31,8 @@ func main() {
 		handlers.ResizeImageHandler(app, ctx, c)
 	})
 	r.GET("/frame/*url", handlers.GetFirstFrameHandler)
+	r.GET("/stream/*url", handlers.StreamVideoHandler)
+
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
