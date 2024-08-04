@@ -24,7 +24,6 @@ func main() {
 		panic(err)
 	}
 
-
 	defer app.Shutdown(ctx)
 
 	r.GET("/external/*url", func(c *gin.Context) {
@@ -32,7 +31,7 @@ func main() {
 	})
 	r.GET("/frame/*url", handlers.GetFirstFrameHandler)
 	r.GET("/stream/*url", handlers.StreamVideoHandler)
-
+	r.GET("/thumbhash/*url", handlers.GetThumbHash)
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -45,6 +44,8 @@ func main() {
 			"message": "Welcome to the media server!",
 		})
 	})
+
+	println("Server started on port 3030")
 
 	r.Run(":3030")
 }
