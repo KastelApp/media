@@ -67,7 +67,7 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 	size, _ := strconv.Atoi(c.Query("size"))
 	width, _ := strconv.Atoi(c.Query("width"))
 	height, _ := strconv.Atoi(c.Query("height"))
-	imageType := c.Query("type")
+	imageType := c.Query("format")
 
 	if url == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "URL query param is required"})

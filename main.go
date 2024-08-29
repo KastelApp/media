@@ -32,6 +32,13 @@ func main() {
 	r.GET("/frame/*url", handlers.GetFirstFrameHandler)
 	r.GET("/stream/*url", handlers.StreamVideoHandler)
 	r.GET("/thumbhash/*url", handlers.GetThumbHash)
+	r.GET("/avatar/:id/:hash", func(c *gin.Context) {
+		handlers.HandleAvatar(app, ctx, c)
+	})
+	r.GET("/file/:channelId/:fileId/:fileName", func(c *gin.Context) {
+		handlers.HandleFile(app, ctx, c)
+	})
+
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
