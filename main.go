@@ -2,14 +2,45 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"go-media-server/config"
 	"go-media-server/handlers"
+	"os"
+
+	"regexp"
 
 	"github.com/cshum/imagor"
 	"github.com/cshum/imagor/loader/httploader"
 	"github.com/cshum/imagor/vips"
 	"github.com/gin-gonic/gin"
-	"regexp"
 )
+
+var serverConfig config.Config
+
+func init() {
+	configFile := "default"
+
+	if len(os.Args) > 1 && os.Args[1] == "--config" {
+		configFile = os.Args[2]
+	}
+
+	file, err := os.Open(fmt.Sprintf("configs/%s.json", configFile))
+
+	if err != nil {
+		panic("Could not open config file")
+	}
+
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+
+	err = decoder.Decode(&serverConfig)
+
+	if err != nil {
+		panic(err)
+	}
+}
 
 func main() {
 	r := gin.Default()
@@ -32,14 +63,14 @@ func main() {
 	})
 	r.GET("/frame/*url", handlers.GetFirstFrameHandler)
 	r.GET("/stream/*url", handlers.StreamVideoHandler)
-	r.GET("/thumbhash/*url", handlers.GetThumbHash)
+	r.GET("/metadata/*url", handlers.GetMetadata)
 
 	r.GET("/avatar/:id/:hash", func(c *gin.Context) {
-		handlers.HandleAvatar(app, ctx, c)
+		handlers.HandleAvatar(app, ctx, c, serverConfig)
 	})
 
 	r.GET("/file/:channelId/:fileId/:fileName", func(c *gin.Context) {
-		handlers.HandleFile(app, ctx, c)
+		handlers.HandleFile(app, ctx, c, serverConfig)
 	})
 
 	r.GET("/logo/:logo", func(c *gin.Context) {
@@ -47,16 +78,16 @@ func main() {
 		logo := c.Param("logo")
 
 		if logo == "" {
-			c.JSON(400, gin.H{"error": "Invalid logo"})
-			
+			c.JSON(400, "")
+
 			return
 		}
 
 		match := regexp.MustCompile(`^icon-\d+.png$`).MatchString(logo)
 
 		if !match {
-			c.JSON(400, gin.H{"error": "Invalid logo"})
-			
+			c.JSON(400, "")
+
 			return
 		}
 

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -15,11 +16,8 @@ import (
 func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context) {
 	url := c.Param("url")
 
-	// ? we want to remove the first / and https?:/ from the url
-	// ? we do want to keep if its http or https tho
-
 	if len(url) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "URL parameter is required"})
+		c.String(http.StatusBadRequest, "")
 
 		return
 	}
@@ -40,20 +38,19 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 		domain = url[6:]
 		url = url[6:]
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
+		c.String(http.StatusBadRequest, "")
 		return
 	}
 
 	domainParts := strings.Split(domain, "/")
+	serviceDomain := c.Request.Host
 
 	if len(domainParts) > 0 {
 		domain = domainParts[0]
 	}
 
-	serviceDomain := c.Request.Host
-
 	if domain == serviceDomain {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid request to the same domain"})
+		c.String(http.StatusInternalServerError, "")
 
 		return
 	}
@@ -70,12 +67,14 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 	imageType := c.Query("format")
 
 	if url == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "URL query param is required"})
+		c.String(http.StatusBadRequest, "")
+
 		return
 	}
 
 	if size != 0 && (width != 0 || height != 0) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "size and width/height cannot be used together"})
+		c.String(http.StatusBadRequest, "")
+
 		return
 	}
 
@@ -85,7 +84,7 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 	}
 
 	if width > 4096 || height > 4096 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "width and height cannot be greater than 4096"})
+		c.String(http.StatusBadRequest, "The providede width or height is too large")
 
 		return
 	}
@@ -102,7 +101,8 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 		}
 
 		if !validType {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image type"})
+			c.String(http.StatusBadRequest, "Unsupported image format")
+
 			return
 		}
 	}
@@ -122,24 +122,24 @@ func ResizeImageHandler(app *imagor.Imagor, ctx context.Context, c *gin.Context)
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.String(http.StatusInternalServerError, "")
+		fmt.Println(err)
 
 		return
 	}
 
 	reader, _, err := blob.NewReader()
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.String(http.StatusInternalServerError, "")
+		fmt.Println(err)
 
 		return
 	}
+
 	defer reader.Close()
 
-	// ? get the content type of the image
 	contentType := blob.ContentType()
-
-	// ? set the content type of the image
 	c.Header("Content-Type", contentType)
-
 	io.Copy(c.Writer, reader)
 }

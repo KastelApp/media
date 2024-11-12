@@ -1,42 +1,38 @@
 package handlers
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"github.com/gin-gonic/gin"
 )
 
-func extractFirstFrame(videoURL, outputFile string, width, height int) error {
-	cmd := exec.Command(
-		"ffmpeg",
-		"-i", videoURL,
-		"-vf", fmt.Sprintf("thumbnail,scale=%d:%d", width, height),
-		"-frames:v", "1",
-		"-f", "image2",
-		outputFile,
-	)
-	output, err := cmd.CombinedOutput()
+func extractFirstFrame(videoURL string, width, height int) (*bytes.Buffer, error) {
+	buf := bytes.NewBuffer(nil)
+
+	err := ffmpeg.Input(videoURL).
+		Filter("thumbnail", ffmpeg.Args{}).
+		Filter("scale", ffmpeg.Args{fmt.Sprintf("%d:%d", width, height)}).
+		Output("pipe:", ffmpeg.KwArgs{"frames:v": "1", "format": "image2"}).
+		WithOutput(buf, nil).
+		Run()
 	if err != nil {
-		return fmt.Errorf("ffmpeg error: %w, output: %s", err, output)
+		return nil, fmt.Errorf("ffmpeg error: %w", err)
 	}
-	return nil
+
+	return buf, nil
 }
 
 func GetFirstFrameHandler(c *gin.Context) {
-
 	url := c.Param("url")
 
-	// ? we want to remove the first / and https?:/ from the url
-	// ? we do want to keep if its http or https tho
-
 	if len(url) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "URL parameter is required"})
+		c.String(http.StatusBadRequest, "")
 
 		return
 	}
@@ -49,28 +45,25 @@ func GetFirstFrameHandler(c *gin.Context) {
 	if strings.HasPrefix(url, "https:/") {
 		isHttps = true
 		domain = url[7:]
-
 		url = url[7:]
-
 	} else if strings.HasPrefix(url, "http:/") {
 		isHttps = false
 		domain = url[6:]
 		url = url[6:]
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
+		c.String(http.StatusBadRequest, "Invalid URL")
 		return
 	}
 
 	domainParts := strings.Split(domain, "/")
+	serviceDomain := c.Request.Host
 
 	if len(domainParts) > 0 {
 		domain = domainParts[0]
 	}
 
-	serviceDomain := c.Request.Host
-
 	if domain == serviceDomain {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid request to the same domain"})
+		c.String(http.StatusInternalServerError, "Loop back URL")
 
 		return
 	}
@@ -85,13 +78,9 @@ func GetFirstFrameHandler(c *gin.Context) {
 	width, _ := strconv.Atoi(c.Query("width"))
 	height, _ := strconv.Atoi(c.Query("height"))
 
-	if url == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "URL parameter is required"})
-		return
-	}
-
 	if size != 0 && (width != 0 || height != 0) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "size and width/height cannot be used together"})
+		c.String(http.StatusBadRequest, "size and width/height cannot be used together")
+
 		return
 	}
 
@@ -100,36 +89,30 @@ func GetFirstFrameHandler(c *gin.Context) {
 		height = size
 	}
 
-	if width > 1024 || height > 1024 { // ? no reason for that high of a resolution
-		c.JSON(http.StatusBadRequest, gin.H{"error": "width and height cannot be greater than 1024"})
+	if width > 1024 || height > 1024 {
+		c.String(http.StatusBadRequest, "width and height cannot be greater than 1024")
 
 		return
 	}
 
 	if size == 0 && width == 0 && height == 0 {
-		// ? default to a 480p image
 		width = 854
 		height = 480
 	}
 
-	outputFile := "first_frame.png"
-
-	defer os.Remove(outputFile)
-
-	if err := extractFirstFrame(url, outputFile, width, height); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to extract frame"})
-		return
-	}
-
-	file, err := os.Open(outputFile)
+	frameBuf, err := extractFirstFrame(url, width, height)
+	
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open extracted frame"})
+		c.String(http.StatusInternalServerError, "")
+
+		fmt.Println(err)
+
 		return
 	}
-	defer file.Close()
 
 	c.Header("Content-Type", "image/png")
-	if _, err := io.Copy(c.Writer, file); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send image"})
+	
+	if _, err := io.Copy(c.Writer, frameBuf); err != nil {
+		c.String(http.StatusInternalServerError, "") // ? shouldn't happen
 	}
 }

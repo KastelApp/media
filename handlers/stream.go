@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -12,7 +13,7 @@ func StreamVideoHandler(c *gin.Context) {
 	url := c.Param("url")
 
 	if len(url) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "URL parameter is required"})
+		c.String(http.StatusBadRequest, "")
 		return
 	}
 
@@ -30,18 +31,19 @@ func StreamVideoHandler(c *gin.Context) {
 		domain = url[6:]
 		url = url[6:]
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL"})
+		c.String(http.StatusBadRequest, "")
 		return
 	}
 
 	domainParts := strings.Split(domain, "/")
+	serviceDomain := c.Request.Host
+
 	if len(domainParts) > 0 {
 		domain = domainParts[0]
 	}
 
-	serviceDomain := c.Request.Host
 	if domain == serviceDomain {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid request to the same domain"})
+		c.String(http.StatusInternalServerError, "Loop back URL")
 		return
 	}
 
@@ -53,8 +55,12 @@ func StreamVideoHandler(c *gin.Context) {
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		c.JSON(http.StatusInternalServerError, "")
+
+		fmt.Println(err)
+
 		return
 	}
 
@@ -63,14 +69,22 @@ func StreamVideoHandler(c *gin.Context) {
 	}
 
 	resp, err := client.Do(req)
+	
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch video"})
+		c.JSON(http.StatusInternalServerError, "")
+
+		fmt.Println(err)
+
 		return
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch video"})
+		c.JSON(http.StatusInternalServerError, "")
+
+		fmt.Println(resp.StatusCode) // ? some people may just block our ips which is fine, sad but fine. Print the status code just in case
+
 		return
 	}
 
@@ -83,7 +97,8 @@ func StreamVideoHandler(c *gin.Context) {
 	c.Status(resp.StatusCode)
 
 	_, err = io.Copy(c.Writer, resp.Body)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stream video"})
+		c.JSON(http.StatusInternalServerError, "")
 	}
 }
