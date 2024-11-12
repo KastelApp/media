@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	_ "golang.org/x/image/webp"
+
 	"github.com/galdor/go-thumbhash"
 	"github.com/gin-gonic/gin"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
@@ -65,6 +67,7 @@ func GetMetadata(c *gin.Context) {
 
 	if domain == serviceDomain {
 		c.String(http.StatusInternalServerError, "Loop back URL")
+
 		return
 	}
 
@@ -75,16 +78,22 @@ func GetMetadata(c *gin.Context) {
 	}
 
 	cacheMutex.Lock()
+
 	if entry, found := cache[url]; found && time.Since(entry.timestamp) < cacheExpiration {
 		cacheMutex.Unlock()
 		c.JSON(http.StatusOK, entry.metadata)
 		return
 	}
+
 	cacheMutex.Unlock()
 
 	resp, err := http.Get(url)
+
 	if err != nil {
 		c.String(http.StatusInternalServerError, "")
+
+		fmt.Println(err)
+
 		return
 	}
 	defer resp.Body.Close()
@@ -96,8 +105,12 @@ func GetMetadata(c *gin.Context) {
 
 	if strings.HasPrefix(contentType, "image/") {
 		img, _, err := image.Decode(resp.Body)
+
 		if err != nil {
 			c.String(http.StatusInternalServerError, "")
+
+			fmt.Println(err)
+
 			return
 		}
 
@@ -139,8 +152,8 @@ func GetMetadata(c *gin.Context) {
 		encodedHash := base64.StdEncoding.EncodeToString(hash)
 
 		metadata = gin.H{
-			"width":  img.Bounds().Dx(),
-			"height": img.Bounds().Dy(),
+			"width":     img.Bounds().Dx(),
+			"height":    img.Bounds().Dy(),
 			"thumbhash": encodedHash,
 		}
 
