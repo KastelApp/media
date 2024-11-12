@@ -78,7 +78,7 @@ func main() {
 		logo := c.Param("logo")
 
 		if logo == "" {
-			c.JSON(400, "")
+			c.String(400, "")
 
 			return
 		}
@@ -86,7 +86,7 @@ func main() {
 		match := regexp.MustCompile(`^icon-\d+.png$`).MatchString(logo)
 
 		if !match {
-			c.JSON(400, "")
+			c.String(400, "")
 
 			return
 		}
@@ -101,9 +101,7 @@ func main() {
 	})
 
 	r.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "Welcome to the media server!",
-		})
+		c.String(200, "Welcome to the media server!")
 	})
 
 	println("Server started on port 3030")

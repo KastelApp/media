@@ -57,7 +57,7 @@ func StreamVideoHandler(c *gin.Context) {
 	req, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, "")
+		c.String(http.StatusInternalServerError, "")
 
 		fmt.Println(err)
 
@@ -71,7 +71,7 @@ func StreamVideoHandler(c *gin.Context) {
 	resp, err := client.Do(req)
 	
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, "")
+		c.String(http.StatusInternalServerError, "")
 
 		fmt.Println(err)
 
@@ -81,7 +81,7 @@ func StreamVideoHandler(c *gin.Context) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
-		c.JSON(http.StatusInternalServerError, "")
+		c.String(http.StatusInternalServerError, "")
 
 		fmt.Println(resp.StatusCode) // ? some people may just block our ips which is fine, sad but fine. Print the status code just in case
 
@@ -99,6 +99,6 @@ func StreamVideoHandler(c *gin.Context) {
 	_, err = io.Copy(c.Writer, resp.Body)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, "")
+		c.String(http.StatusInternalServerError, "")
 	}
 }

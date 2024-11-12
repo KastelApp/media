@@ -29,7 +29,7 @@ func HandleFile(app *imagor.Imagor, ctx context.Context, c *gin.Context, serverC
 	mimeType := mime.TypeByExtension(ext)
 
 	if mimeType != "" && mimeType != "image/gif" && strings.HasPrefix(mimeType, "image") {
-		fixedUrl := fmt.Sprintf("/%s:/%s/%s/%s/%s", config.GetProtocol(serverConfig.Secure), serverConfig.CdnUrl, channelId, fileId, fileName)
+		fixedUrl := fmt.Sprintf("%s:/%s/%s/%s/%s", config.GetProtocol(serverConfig.Secure), serverConfig.CdnUrl, channelId, fileId, fileName)
 		c.Params = append(c.Params, gin.Param{Key: "url", Value: fixedUrl})
 		ResizeImageHandler(app, ctx, c)
 

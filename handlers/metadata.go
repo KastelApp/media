@@ -101,7 +101,6 @@ func GetMetadata(c *gin.Context) {
 			return
 		}
 
-		// Compute thumbhash for images
 		hash := thumbhash.EncodeImage(img)
 		encodedHash := base64.StdEncoding.EncodeToString(hash)
 
@@ -126,7 +125,6 @@ func GetMetadata(c *gin.Context) {
 			return
 		}
 
-		// Read the first frame's image data
 		img, _, err := image.Decode(buf)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "")
@@ -136,9 +134,14 @@ func GetMetadata(c *gin.Context) {
 			return
 		}
 
+		hash := thumbhash.EncodeImage(img)
+
+		encodedHash := base64.StdEncoding.EncodeToString(hash)
+
 		metadata = gin.H{
 			"width":  img.Bounds().Dx(),
 			"height": img.Bounds().Dy(),
+			"thumbhash": encodedHash,
 		}
 
 	} else {
@@ -154,6 +157,5 @@ func GetMetadata(c *gin.Context) {
 	}
 	cacheMutex.Unlock()
 
-	// Return metadata
 	c.JSON(http.StatusOK, metadata)
 }
